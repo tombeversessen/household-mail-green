@@ -1,0 +1,27 @@
+{
+  "version": "0.1.0",
+  "arch": [
+    "aarch64"
+  ],
+  "startup": "application",
+  "boot": "manual",
+  "init": false,
+  "host_network": false,
+  "hassio_api": false,
+  "homeassistant_api": false,
+  "apparmor": true,
+  "name": "Household Mail \u2014 OpenAI-verbinding",
+  "slug": "openai_mail_tunnel",
+  "description": "Beveiligde uitgaande verbinding uitsluitend naar de mail-app.",
+  "options": {
+    "tunnel_id": "",
+    "runtime_key": "",
+    "mail_app_hostname": ""
+  },
+  "schema": {
+    "tunnel_id": "str",
+    "runtime_key": "password",
+    "mail_app_hostname": "str"
+  },
+  "url": "https://github.com/tombeversessen/household-mail-green"
+}

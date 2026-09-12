@@ -1,0 +1,25 @@
+[build-system]
+requires = ["setuptools>=75"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "household-imap"
+version = "0.1.0"
+description = "Private, read-only IMAP tools over authenticated MCP"
+requires-python = ">=3.12"
+dependencies = ["mcp==2.2.0", "imapclient==3.1.0", "PyJWT[crypto]==2.14.0", "cryptography==46.0.7"]
+
+[project.optional-dependencies]
+test = ["pytest==9.1.1", "pytest-asyncio==1.4.0"]
+
+[project.scripts]
+household-imap = "household_imap.server:main"
+imap-check = "household_imap.check:main"
+
+[tool.setuptools.packages.find]
+include = ["household_imap*"]
+
+[tool.pytest.ini_options]
+asyncio_mode = "auto"
+testpaths = ["tests"]
+

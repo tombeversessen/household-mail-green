@@ -1,0 +1,6 @@
+__pycache__/
+*.pyc
+.env*
+options.json
+*.secrets
+.pytest_cache/

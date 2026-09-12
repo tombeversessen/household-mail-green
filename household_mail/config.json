@@ -1,0 +1,47 @@
+{
+  "version": "0.1.0",
+  "arch": [
+    "aarch64"
+  ],
+  "startup": "application",
+  "boot": "manual",
+  "init": false,
+  "host_network": false,
+  "hassio_api": false,
+  "homeassistant_api": false,
+  "apparmor": true,
+  "name": "Household Mail \u2014 alleen lezen",
+  "slug": "household_mail",
+  "description": "E\u00e9n Combell-mailbox, alleen lezen, uitsluitend via geauthenticeerde MCP.",
+  "options": {
+    "mailbox_username": "",
+    "mailbox_password": "",
+    "folders": [
+      "INBOX"
+    ],
+    "resource_url": "",
+    "oauth_issuer": "",
+    "oauth_jwks_url": "",
+    "allowed_subjects": [],
+    "allowed_client_ids": [],
+    "mail_app_hostname": ""
+  },
+  "schema": {
+    "mailbox_username": "str",
+    "mailbox_password": "password",
+    "folders": [
+      "str"
+    ],
+    "resource_url": "url",
+    "oauth_issuer": "url",
+    "oauth_jwks_url": "url",
+    "allowed_subjects": [
+      "str"
+    ],
+    "allowed_client_ids": [
+      "str"
+    ],
+    "mail_app_hostname": "str"
+  },
+  "url": "https://github.com/tombeversessen/household-mail-green"
+}
