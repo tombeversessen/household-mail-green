@@ -9,7 +9,7 @@ No host ports, device access, Home Assistant API access, Supervisor API access o
 
 ## Status
 
-Python configuration, authentication and read-only IMAP tests pass locally. The ARM64 base images have been checked at the official registries and pinned by digest. The complete images have **not yet passed a container build or Home Assistant installation test**. Do not treat this as an operational deployment.
+Both complete ARM64 container images built successfully in [GitHub Actions](https://github.com/tombeversessen/household-mail-green/actions/runs/34714680648), and all 60 software tests passed on ARM64. Tunnel startup and safe rejection of empty configurations also passed. Home Assistant recognizes both apps. Installation, live authentication, mailbox access and scheduled ChatGPT use still require acceptance testing; this is not yet an operational deployment.
 
 This repository contains software only. Configure secrets in Home Assistant app options, never in Git. Options and backups remain accessible to appropriately privileged Home Assistant administrators.
 
