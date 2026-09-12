@@ -1,1 +1,56 @@
-
+name: Build and validate Green apps
+on:
+  push:
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  arm64:
+    runs-on: ubuntu-24.04-arm
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - name: Unpack reviewed bootstrap source if needed
+        run: |
+          if [ ! -f repository.json ]; then
+            echo 'f1d776846df788850ea054ea8c03cbd52d923f46081fb294f82d03c4a688ac36  green-source.zip' | sha256sum -c -
+            unzip -o green-source.zip
+          fi
+      - name: Build mail app
+        run: docker build -t household-mail-test ./household_mail
+      - name: Build tunnel app
+        run: docker build -t household-tunnel-test ./openai_mail_tunnel
+      - name: Test software on ARM64
+        run: |
+          docker run --rm --entrypoint sh -v "$PWD:/suite:ro" household-mail-test -c 'pip install pytest==9.1.1 pytest-asyncio==1.4.0 && cd /suite && PYTHONPATH=/suite/household_mail python -m pytest -q tests'
+      - name: Verify tunnel binary starts
+        run: docker run --rm --entrypoint /usr/local/bin/tunnel-client household-tunnel-test --version
+      - name: Verify empty configurations fail safely
+        run: |
+          mkdir -p /tmp/empty-mail-options
+          printf '{}' > /tmp/empty-mail-options/options.json
+          for image in household-mail-test household-tunnel-test; do
+            if docker run --rm -v /tmp/empty-mail-options:/data:ro "$image"; then
+              echo 'ERROR: missing configuration was accepted'
+              exit 1
+            fi
+          done
+  publish-source:
+    needs: arm64
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+      - name: Publish successfully tested source tree
+        run: |
+          if [ ! -f repository.json ]; then
+            echo 'f1d776846df788850ea054ea8c03cbd52d923f46081fb294f82d03c4a688ac36  green-source.zip' | sha256sum -c -
+            unzip -o green-source.zip
+            git config user.name 'github-actions[bot]'
+            git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+            git add README.md repository.json .gitignore household_mail openai_mail_tunnel tests
+            git commit -m 'Publish ARM64-tested Green app source'
+            git push
+          fi
