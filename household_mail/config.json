@@ -1,5 +1,5 @@
 {
-  "version": "0.1.0",
+  "version": "0.1.1",
   "arch": [
     "aarch64"
   ],
@@ -10,9 +10,9 @@
   "hassio_api": false,
   "homeassistant_api": false,
   "apparmor": true,
-  "name": "Household Mail \u2014 alleen lezen",
+  "name": "Household Mail — alleen lezen",
   "slug": "household_mail",
-  "description": "E\u00e9n Combell-mailbox, alleen lezen, uitsluitend via geauthenticeerde MCP.",
+  "description": "Eén Combell-mailbox, alleen lezen, uitsluitend via geauthenticeerde MCP.",
   "options": {
     "mailbox_username": "",
     "mailbox_password": "",
