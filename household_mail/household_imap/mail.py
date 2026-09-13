@@ -10,6 +10,7 @@ from email.parser import BytesParser
 from html.parser import HTMLParser
 
 from imapclient import IMAPClient
+from imapclient.exceptions import LoginError
 from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
 
 from .config import MailConfig, safe_text
@@ -208,17 +209,27 @@ class MailService:
     @contextmanager
     def connection(self, account):
         client = None
+        stage = "connect"
         try:
             client = self.factory(account.host, port=account.port, ssl=True,
                                   ssl_context=ssl.create_default_context(), timeout=15, use_uid=True)
             guard_commands(client)
+            stage = "login"
             client.login(*account.credentials())
+            stage = "read"
             yield client
         except MailError:
             raise
+        except LoginError:
+            raise MailError("IMAP login rejected; verify mailbox credentials") from None
         except Exception:
-            # IMAP and parser exceptions can contain passwords, addresses, queries or message text.
-            raise MailError("Mailbox operation failed; check credentials, folder availability and connectivity") from None
+            # Only fixed stage labels: never expose exception text or secret values.
+            messages = {
+                "connect": "IMAP connection failed before login; check DNS, TLS and connectivity",
+                "login": "IMAP login could not complete; check credentials and connectivity",
+                "read": "IMAP read operation failed after login; check folder availability and protocol support",
+            }
+            raise MailError(messages[stage]) from None
         finally:
             if client:
                 try:
