@@ -64,7 +64,7 @@ def test_http_auth_discovery_and_tools(mail_config, auth_config, signed):
         tools = result.json()["result"]["tools"]
         assert len(tools) == 7
         assert all(t["annotations"]["readOnlyHint"] and not t["annotations"]["destructiveHint"] for t in tools)
-        assert all(t["_meta"]["securitySchemes"][0]["scopes"] == ["mail:read"] for t in tools)
+        assert all(t["_meta"]["securitySchemes"][0]["scopes"] == ["mail:read", "offline_access"] for t in tools)
         call = client.post("/mcp", headers=headers, json={"jsonrpc": "2.0", "id": 3, "method": "tools/call",
                            "params": {"name": "list_accounts", "arguments": {}}})
         assert call.status_code == 200 and "personal" in call.text and "hidden" not in call.text
