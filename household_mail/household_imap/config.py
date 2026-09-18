@@ -23,6 +23,7 @@ class Account(BaseModel):
     folders: list[str] = Field(min_length=1, max_length=20)
     enabled: bool = False
     airmail_flag_verified: bool = False
+    discover_sent: bool = False
 
     @field_validator("host")
     @classmethod

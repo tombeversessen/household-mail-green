@@ -253,8 +253,13 @@ class MailService:
             rows = client.list_folders()
             visible = [{"name": name, "flags": [clean(f.decode("ascii", "replace"), 100) for f in fs]}
                        for fs, delimiter, name in rows if name in account.folders]
-        return {"folders": visible, "configured_but_missing": [f for f in account.folders if f not in {r["name"] for r in visible}],
+        result = {"folders": visible, "configured_but_missing": [f for f in account.folders if f not in {r["name"] for r in visible}],
                 "note": "Only administrator-allowed folders are exposed"}
+        if account.discover_sent:
+            # LIST metadata only; discovery never grants message access.
+            result["server_sent_folders"] = [name for fs, delimiter, name in rows
+                                             if b"\\sent" in {f.lower() for f in fs}]
+        return result
 
     def search(self, query: Query, account_ids=None, folders=None, limit=20, offset=0, criteria=None):
         if not 1 <= limit <= 50 or not 0 <= offset <= 10000:
@@ -275,7 +280,9 @@ class MailService:
                     chosen = uids[skip: skip + max(0, limit - len(results))]
                     skip = max(0, skip - len(uids))
                     if chosen:
+                        before = client.fetch(chosen, ["FLAGS"])
                         rows = client.fetch(chosen, ["FLAGS", "INTERNALDATE", "RFC822.SIZE", HEADER_ITEM])
+                        after = client.fetch(chosen, ["FLAGS"])
                         for uid in chosen:
                             if uid not in rows:
                                 continue  # Another client may have expunged the message.
@@ -284,6 +291,9 @@ class MailService:
                             raw = payload(row)
                             results.append({"id": ref.encode(), "account": account.id, "folder": folder,
                                             "uid": uid, "flags": flags(row),
+                                            "flags_before": flags(before.get(uid, {})),
+                                            "flags_after": flags(after.get(uid, {})),
+                                            "flags_unchanged": uid in before and uid in after and flags(before[uid]) == flags(after[uid]),
                                             "received_at": str(row.get(b"INTERNALDATE", "")),
                                             "headers_truncated": len(raw) >= HEADER_LIMIT,
                                             **parse_message(raw)})
