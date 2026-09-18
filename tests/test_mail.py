@@ -151,3 +151,51 @@ def test_body_cap_is_reported(mail_config):
     svc = MailService(mail_config, Large)
     ref = MessageRef(account="personal", folder="INBOX", uidvalidity=99, uid=1).encode()
     assert svc.read(ref)["raw_truncated"]
+
+
+def test_sent_discovery_does_not_expose_messages(mail_config):
+    from household_imap.config import Account
+    class SpecialFolders(FakeIMAP):
+        def list_folders(self):
+            return [((), b'/', 'INBOX'), ((b'\\Sent',), b'/', 'INBOX.Verzonden'),
+                    ((), b'/', 'Sent')]
+    personal = mail_config.accounts[0]
+    mum = Account(id='mum', label='Mum', username_env='IMAP_USER',
+                  password_env='IMAP_PASSWORD', enabled=True,
+                  folders=['INBOX'], discover_sent=True)
+    config = mail_config.model_copy(update={'accounts': [personal, mum]})
+    service = MailService(config, SpecialFolders)
+    result = service.list_folders('mum')
+    assert result['server_sent_folders'] == ['INBOX.Verzonden']
+    assert [f['name'] for f in result['folders']] == ['INBOX']
+    assert 'server_sent_folders' not in service.list_folders('personal')
+    with pytest.raises(MailError, match='not exposed'):
+        service.targets(['mum'], ['INBOX.Verzonden'])
+    read = service.read(service.search(Query(), ['mum'], limit=1)['messages'][0]['id'])
+    assert read['account'] == 'mum' and read['flags_unchanged']
+
+
+def test_header_search_checks_flags_without_fetching_body(mail_config):
+    clients = []
+    def factory(*a, **kw):
+        client = FakeIMAP(*a, **kw)
+        clients.append(client)
+        return client
+    result = MailService(mail_config, factory).recent(account_ids=['personal'],
+                                                     folders=['INBOX'], limit=1)
+    assert result['messages'][0]['flags_unchanged']
+    assert 'text' not in result['messages'][0]
+    calls = clients[0].calls
+    assert not any(BODY_ITEM in str(c) for c in calls)
+    assert sum(c[0:2] == ('UID', 'FETCH') for c in calls) == 3
+
+
+def test_header_search_reports_concurrent_flag_change(mail_config):
+    class Changing(FakeIMAP):
+        def fetch(self, uids, items):
+            rows = super().fetch(uids, items)
+            if HEADER_ITEM in items:
+                self.flags = (b'\\Seen',)
+            return rows
+    result = MailService(mail_config, Changing).search(Query(), ['personal'], ['INBOX'], limit=1)
+    assert result['messages'][0]['flags_unchanged'] is False

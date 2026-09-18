@@ -66,3 +66,35 @@ def test_internal_host_auth_still_required(monkeypatch,options):
         assert client.post('/mcp',json={}).status_code==401
     monkeypatch.setenv('IMAP_INTERNAL_HOST','*.example.com')
     with pytest.raises(ValueError): make_app(build_server(cfg,auth),auth)
+
+
+def test_second_account_preserves_personal_and_secrets(options):
+    before, old_env = mail.prepare(options)
+    options.update(mum_enabled=True, mum_username='mum@example.invalid',
+                   mum_password='synthetic-second-secret', mum_folders=['INBOX'])
+    after, env = mail.prepare(options)
+    assert after.accounts[0] == before.accounts[0]
+    assert all(env[k] == v for k, v in old_env.items())
+    mum = after.accounts[1]
+    assert mum.id == 'mum' and mum.label == 'Mum – Combell'
+    assert mum.host == 'imap.mailprotect.be' and mum.port == 993
+    assert mum.folders == ['INBOX'] and mum.discover_sent
+    assert env['IMAP_MUM_PASSWORD'] == options['mum_password']
+    assert options['mum_password'] not in after.model_dump_json()
+    assert options['mum_username'] not in after.model_dump_json()
+
+
+def test_disabled_second_account_has_no_effect(options):
+    before = mail.prepare(options)
+    options.update(mum_enabled=False, mum_username='', mum_password='', mum_folders=['INBOX'])
+    assert mail.prepare(options) == before
+
+
+@pytest.mark.parametrize('change', [dict(mum_password=''), dict(mum_username=''),
+    dict(mum_folders=[]), dict(mum_folders=['INBOX\r\nSTORE']), dict(mum_enabled='true')])
+def test_bad_second_account_settings(options, change):
+    options.update(mum_enabled=True, mum_username='mum@example.invalid',
+                   mum_password='synthetic-second-secret', mum_folders=['INBOX'])
+    options.update(change)
+    with pytest.raises(ValueError):
+        mail.prepare(options)
