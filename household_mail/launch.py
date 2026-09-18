@@ -11,7 +11,8 @@ from household_imap.config import Account, AuthConfig, MailConfig
 def prepare(options):
     expected = {'mailbox_username', 'mailbox_password', 'folders', 'resource_url',
                 'oauth_issuer', 'oauth_jwks_url', 'allowed_subjects', 'allowed_client_ids', 'mail_app_hostname'}
-    if set(options) != expected:
+    optional = {'mum_enabled', 'mum_username', 'mum_password', 'mum_folders'}
+    if not expected <= set(options) or set(options) - expected - optional:
         raise ValueError('Invalid configuration')
     for key in ('mailbox_username', 'mailbox_password'):
         if not isinstance(options[key], str) or not options[key] or len(options[key]) > 4096:
@@ -36,6 +37,22 @@ def prepare(options):
            'OAUTH_JWKS_URL': auth.jwks_url,
            'OAUTH_ALLOWED_SUBJECTS': ' '.join(auth.allowed_subjects),
            'OAUTH_ALLOWED_CLIENT_IDS': ' '.join(auth.allowed_client_ids), 'PORT': '8000', 'IMAP_INTERNAL_HOST': hostname}
+    enabled = options.get('mum_enabled', False)
+    if not isinstance(enabled, bool):
+        raise ValueError('Invalid second mailbox enable setting')
+    if enabled:
+        for key in ('mum_username', 'mum_password'):
+            value = options.get(key)
+            if not isinstance(value, str) or not value or len(value) > 4096:
+                raise ValueError('Missing second mailbox configuration')
+        mum = Account(id='mum', label='Mum – Combell', enabled=True,
+                      host='imap.mailprotect.be', port=993,
+                      username_env='IMAP_MUM_USERNAME', password_env='IMAP_MUM_PASSWORD',
+                      folders=options.get('mum_folders', ['INBOX']),
+                      discover_sent=True, airmail_flag_verified=False)
+        config = MailConfig(accounts=[account, mum])
+        env.update(IMAP_MUM_USERNAME=options['mum_username'],
+                   IMAP_MUM_PASSWORD=options['mum_password'])
     return config, env
 
 
